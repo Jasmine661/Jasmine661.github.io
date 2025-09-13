@@ -4,8 +4,8 @@
 
 # Site
 title: Jasmine的小世界
-subtitle: 看见雪停，我便猜是你要到了。
-description: ''
+subtitle: 看见雪停，我便猜是你要到了。 ————Zayne
+description: 忙着敲代码的黎夫人
 keywords:
 author: Jasmine
 language: zh-CN
@@ -40,7 +40,7 @@ external_link:
   exclude: ''
 filename_case: 0
 render_drafts: false
-post_asset_folder: false
+post_asset_folder: true
 relative_link: false
 future: true
 syntax_highlighter: highlight.js
@@ -96,11 +96,11 @@ ignore:
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+theme: butterfly
 
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
 deploy:
   type: git
-  repository: https://github.com/Jasmine661/Jasmine661.github.io.git
+  repository: git@github.com:Jasmine661/Jasmine661.github.io.git
   branch: main
