@@ -45,7 +45,7 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       hexo-theme-butterfly:
-        specifier: ^5.3.5
+        specifier: ^5.5.0
         version: 5.5.0
       hexo-theme-landscape:
         specifier: ^1.0.0
