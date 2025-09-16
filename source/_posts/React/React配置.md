@@ -3,6 +3,7 @@ title: React项目配置的小tips
 description: 
 top_img: /image/React.jpg
 cover: /image/React.jpg
+categories: React
 ---
 # CSS样式
 

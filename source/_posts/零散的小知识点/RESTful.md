@@ -3,6 +3,7 @@ title: RESTful
 description: 
 top_img: 
 cover: 
+categories: 零散的小知识点
 ---
 
 # 概念
@@ -17,7 +18,7 @@ RESTful 是一种 Web API 设计风格，它强调使用 HTTP 的标准方法（
 
 3.使用HTTP动词
 
-![74877971734](RESTful.assets/1748779717346.png)
+![RESTful API设计规范](RESTful.assets/1748779717346.png)
 
 4.HATOAS超媒体即应用状态引擎
 

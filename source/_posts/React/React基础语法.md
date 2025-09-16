@@ -3,6 +3,7 @@ title: React基础语法
 description: 学习React时做的小笔记呀🎄◟(˶> ᎑ <˶)◞🎄
 top_img: /image/React.jpg
 cover: /image/React.jpg
+categories: React
 ---
 ## **useState**
 

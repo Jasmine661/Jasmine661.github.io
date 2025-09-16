@@ -3,7 +3,7 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Jasmine的小世界
+title: 欢迎来到我的小世界
 description: ''
 keywords:
 author: Jasmine
@@ -26,14 +26,14 @@ main: "#8aabd9"
 
 #
 avatar:
-  img: /image/avatar.jpg
+  img: /image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg
   # effect: true 会一直转
 
 #social:
 fa-github: https://github.com/Jasmine661 || fab
 
 #nav:
-logo: /image/avatar.jpg
+logo: /image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg
 display_title: true
 fixed: false # fixed navigation bar    
 menu:
@@ -45,9 +45,10 @@ menu:
     音乐: /music/ || fas fa-music
     照片: /Gallery/ || fas fa-images
     电影: /movies/ || fas fa-video
+
 #顶部图
-index_img: /image/header.jpg #默认顶部图
-default_top_img: /image/header.jpg #默认顶部图
+index_img: /image/header2.jpg #默认顶部图
+default_top_img: /image/微信图片_20250916201203_23_247.jpg #默认顶部图
 #index_top_img_height: 800px #顶部图高度默认为整个视口
 
 runtimeshow:
@@ -90,7 +91,7 @@ highlight_shrink: true
 #logo
 nav:
   # Navigation bar logo image
-  logo: /image/avatar.jpg
+  logo: /image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg
   display_title: true
 
 
@@ -129,7 +130,7 @@ external_link:
   exclude: ''
 filename_case: 0
 render_drafts: false
-post_asset_folder: false
+post_asset_folder: true
 relative_link: false
 future: true
 syntax_highlighter: highlight.js

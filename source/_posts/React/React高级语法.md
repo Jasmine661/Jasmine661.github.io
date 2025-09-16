@@ -3,6 +3,7 @@ title: React高级语法
 description: 学习React时做的小笔记呀🎄◟(˶> ᎑ <˶)◞🎄
 top_img: /image/React2.jpg
 cover: /image/React2.jpg
+categories: React
 ---
 # React高级语法
 

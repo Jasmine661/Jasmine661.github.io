@@ -41,7 +41,7 @@ cover: /image/React.jpg
 
 用来链接Redux和React组件的中间件
 
-![74851509028](Redux.assets/1748515090280.png)
+![Redux工具链展示](Redux.assets/1748515090280.png)
 
 ### 启动项目
 
