@@ -1,0 +1,247 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>重绘与回流 | jasmine的世界</title><meta name="author" content="Jasmine"><meta name="copyright" content="Jasmine"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="概念引入 浏览器的主要线程有 JS线程 和 UI线程，宏观顺序关系是 JS 执行 → 样式计算 → 回流 → 重绘 → 合成 →GPU→ 下一轮循环，所以如果一个循环中进行多次的回流重绘，就会阻塞下一个循环的 JS执行 回流（Reflow &#x2F; Layout）当浏览器发现 render tree 中某个部分的几何尺寸（位置、大小）发生变化，需要重新计算元素的几何属性，然后重新布局整个渲染树">
+<meta property="og:type" content="article">
+<meta property="og:title" content="重绘与回流">
+<meta property="og:url" content="https://jasmine661.github.io/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/index.html">
+<meta property="og:site_name" content="jasmine的世界">
+<meta property="og:description" content="概念引入 浏览器的主要线程有 JS线程 和 UI线程，宏观顺序关系是 JS 执行 → 样式计算 → 回流 → 重绘 → 合成 →GPU→ 下一轮循环，所以如果一个循环中进行多次的回流重绘，就会阻塞下一个循环的 JS执行 回流（Reflow &#x2F; Layout）当浏览器发现 render tree 中某个部分的几何尺寸（位置、大小）发生变化，需要重新计算元素的几何属性，然后重新布局整个渲染树">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://jasmine661.github.io/image/b8efb915a5ef35aa58e10657028c9baa.jpg">
+<meta property="article:published_time" content="2025-09-23T07:48:56.840Z">
+<meta property="article:modified_time" content="2025-09-24T14:49:43.759Z">
+<meta property="article:author" content="Jasmine">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://jasmine661.github.io/image/b8efb915a5ef35aa58e10657028c9baa.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "重绘与回流",
+  "url": "https://jasmine661.github.io/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/",
+  "image": "https://jasmine661.github.io/image/b8efb915a5ef35aa58e10657028c9baa.jpg",
+  "datePublished": "2025-09-23T07:48:56.840Z",
+  "dateModified": "2025-09-24T14:49:43.759Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Jasmine",
+      "url": "https://jasmine661.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://jasmine661.github.io/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '重绘与回流',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/image/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-heartbeat"></i><span> 清单</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/image/b8efb915a5ef35aa58e10657028c9baa.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg" alt="Logo"><span class="site-name">jasmine的世界</span></a><a class="nav-page-title" href="/"><span class="site-name">重绘与回流</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-heartbeat"></i><span> 清单</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">重绘与回流</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-09-23T07:48:56.840Z" title="发表于 2025-09-23 15:48:56">2025-09-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-09-24T14:49:43.759Z" title="更新于 2025-09-24 22:49:43">2025-09-24</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">前端性能优化</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/">重绘与回流</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h1><p>引入</p>
+<p>浏览器的主要线程有 JS线程 和 UI线程，宏观顺序关系是 <strong>JS 执行 → 样式计算 → 回流 → 重绘 → 合成 →GPU→ 下一轮循环</strong>，所以如果一个循环中进行多次的回流重绘，就会阻塞下一个循环的 JS执行</p>
+<h2 id="回流（Reflow-Layout）"><a href="#回流（Reflow-Layout）" class="headerlink" title="回流（Reflow &#x2F; Layout）"></a><strong>回流</strong>（Reflow &#x2F; Layout）</h2><p>当浏览器发现 render tree 中某个部分的几何尺寸（位置、大小）发生变化，需要重新计算元素的几何属性，然后重新布局整个渲染树，这个过程叫做回流。</p>
+<p><strong>触发回流的典型操作</strong>：</p>
+<ul>
+<li>添加或删除可见的 DOM 元素</li>
+<li>元素的大小、位置发生变化（比如 <code>width</code>、<code>height</code>、<code>margin</code>、<code>padding</code>、<code>border</code>、<code>font-size</code> 等属性改变）</li>
+<li>浏览器窗口大小变化（因为会影响布局）</li>
+<li>获取某些属性时（如 <code>offsetTop</code>、<code>offsetHeight</code>、<code>clientWidth</code>、<code>scrollTop</code> 等），因为需要计算最新的布局结果</li>
+</ul>
+<blockquote>
+<p>回流的代价比较大，因为可能会导致整个页面的重新布局。</p>
+</blockquote>
+<h2 id="重绘（Repaint）"><a href="#重绘（Repaint）" class="headerlink" title="重绘（Repaint）"></a>重绘（Repaint）</h2><p><strong>定义</strong>：当元素的外观样式改变，但没有影响布局时，浏览器会重新把该元素绘制一遍，这个过程叫做重绘。</p>
+<p><strong>触发重绘的典型操作</strong>：</p>
+<ul>
+<li>改变元素的 <code>color</code>、<code>background-color</code>、<code>visibility</code>、<code>box-shadow</code> 等不会影响几何尺寸的属性</li>
+</ul>
+<blockquote>
+<p>重绘比回流开销小，但仍然会消耗性能。</p>
+</blockquote>
+<h1 id="减少重绘回流的方案"><a href="#减少重绘回流的方案" class="headerlink" title="减少重绘回流的方案"></a>减少重绘回流的方案</h1><p><strong>1.一般性的优化思路</strong></p>
+<p><strong>(1) 减少回流</strong>：</p>
+<p>避免逐条修改样式</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">el.<span class="property">style</span>.<span class="property">width</span> = <span class="string">&quot;100px&quot;</span>;</span><br><span class="line">el.<span class="property">style</span>.<span class="property">height</span> = <span class="string">&quot;100px&quot;</span>;</span><br><span class="line">el.<span class="property">style</span>.<span class="property">margin</span> = <span class="string">&quot;10px&quot;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 下面为改进</span></span><br><span class="line">el.<span class="property">style</span>.<span class="property">cssText</span> = <span class="string">&quot;width:100px;height:100px;margin:10px&quot;</span>;</span><br><span class="line"><span class="comment">// 或者直接操作 class</span></span><br><span class="line">el.<span class="property">classList</span>.<span class="title function_">add</span>(<span class="string">&quot;new-style&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>批量 DOM 操作：先 <code>documentFragment</code> 中处理，最后一次性塞进 DOM</p>
+<p>缓存需要的布局信息：避免在循环里多次读取 <code>offsetHeight</code> &#x2F; <code>clientWidth</code>，因为每次读取都会触发回流</p>
+<p><strong>(2) 减少重绘</strong></p>
+<p>只修改必要的样式，比如动画尽量用 <code>transform</code> 和 <code>opacity</code>（它们不会触发回流，通常只会触发合成）</p>
+<p><strong>2.利用“图层隔离”（GPU 合成层）</strong></p>
+<h1 id="Chrome创建图层的条件"><a href="#Chrome创建图层的条件" class="headerlink" title="Chrome创建图层的条件"></a>Chrome创建图层的条件</h1><p><strong>1.3D 或透视变换</strong></p>
+<p><strong>2.使用will-change提示浏览器</strong></p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-class">.box</span> &#123;</span><br><span class="line">  <span class="attribute">will-change</span>: transform, opacity;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>3.使用CSS动画或过渡且涉及合成属性</strong></p>
+<p>​	当元素正在进行 <strong>transform &#x2F; opacity</strong> 动画时，浏览器会自动把它提升为独立图层，避免主线程频繁计算布局</p>
+<p><strong>4.拥有 CSS 滤镜或遮罩</strong></p>
+<ul>
+<li>使用 <code>filter</code>（模糊、亮度、对比度等）</li>
+<li>使用 <code>mask</code> 或 <code>clip-path</code></li>
+</ul>
+<p><strong>5.使用 video、canvas、iframe 等媒体元素</strong></p>
+<p><strong>6.具有特定的 CSS 属性</strong></p>
+<ul>
+<li><code>position: fixed</code>（在一些场景下可能被单独提取出来，方便滚动合成）</li>
+<li><code>overflow: scroll</code> 或 <code>overflow: auto</code> 且内容溢出时（独立的滚动层）</li>
+</ul>
+<p><strong>7.被 GPU 加速绘制要求覆盖</strong></p>
+<h1 id="实战优化"><a href="#实战优化" class="headerlink" title="实战优化"></a>实战优化</h1><h2 id="用-translate-代替-top-改变"><a href="#用-translate-代替-top-改变" class="headerlink" title="用 translate 代替 top 改变"></a><strong>用 translate 代替 top 改变</strong></h2><p>top 会触发 Layout 的过程但是 translate 不会。但是现在浏览器对position: absolute&#x2F;fixed + top&#x2F;left的优化已经好了很多，在简单动画中，top的消耗也是比较小的。但是最推荐的还是使用translate。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="language-css"></span></span><br><span class="line"><span class="language-css">    <span class="selector-id">#rect</span> &#123;</span></span><br><span class="line"><span class="language-css">      <span class="attribute">width</span>: <span class="number">100px</span>;</span></span><br><span class="line"><span class="language-css">      <span class="attribute">height</span>: <span class="number">100px</span>;</span></span><br><span class="line"><span class="language-css">      <span class="attribute">background-color</span>: coral;</span></span><br><span class="line"><span class="language-css">      <span class="attribute">transform</span>: <span class="built_in">translateY</span>(<span class="number">0</span>); </span></span><br><span class="line"><span class="language-css">      <span class="comment">/* top: 0;</span></span></span><br><span class="line"><span class="comment"><span class="language-css">      position: relative; */</span></span></span><br><span class="line"><span class="language-css">    &#125;</span></span><br><span class="line"><span class="language-css"></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;rect&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    <span class="built_in">setTimeout</span>(<span class="function">() =&gt;</span> &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="comment">// document.getElementById(&#x27;rect&#x27;).style.top = &#x27;100px&#x27;</span></span></span><br><span class="line"><span class="language-javascript">      <span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&#x27;rect&#x27;</span>).<span class="property">style</span>.<span class="property">transform</span> = <span class="string">&#x27;translateY(100px)&#x27;</span></span></span><br><span class="line"><span class="language-javascript">    &#125;,<span class="number">2000</span>)</span></span><br><span class="line"><span class="language-javascript">  </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>以上示例中页面的一个UI线程循环从 0.48ms 优化到 0.20ms，其中 transform 没有回流的过程(Layout)</p>
+<p>常用场景是页面的浮窗</p>
+<h2 id="用-opacity-代替-visibility"><a href="#用-opacity-代替-visibility" class="headerlink" title="用 opacity 代替 visibility"></a><strong>用 opacity 代替 visibility</strong></h2><p>opacity 和 visibility都不会触发回流。注意有opacity属性的元素在独立图层的时候，修改opacity只会触发合成，不会触发重绘，但如果元素在普通的图层，仍会触发重绘。但是我在这里遇到一些问题，在 performance 中看还是会有显示了重绘**（有待解决）**，但是我测试 opacity 时没有观察到闪绿，在测试 visibility 时还是会闪绿的。</p>
+<p>而且几次测试下开，感觉两个的性能差别不大？很可能是我的demo比较简单的原因，在读网上的文章中还是更推荐使用 opacity。</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="language-css"></span></span><br><span class="line"><span class="language-css">  <span class="selector-tag">body</span> &#123;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">margin</span>: <span class="number">20px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">font-family</span>: Arial;</span></span><br><span class="line"><span class="language-css">  &#125;</span></span><br><span class="line"><span class="language-css"></span></span><br><span class="line"><span class="language-css">  <span class="selector-class">.container</span> &#123;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">position</span>: relative;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">width</span>: <span class="number">300px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">height</span>: <span class="number">200px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">border</span>: <span class="number">1px</span> solid <span class="number">#ccc</span>;</span></span><br><span class="line"><span class="language-css">  &#125;</span></span><br><span class="line"><span class="language-css"></span></span><br><span class="line"><span class="language-css">  <span class="selector-id">#rect</span> &#123;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">width</span>: <span class="number">200px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">height</span>: <span class="number">150px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">background</span>: <span class="number">#4682b4</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">display</span>: flex;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">align-items</span>: center;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">justify-content</span>: center;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">color</span>: white;</span></span><br><span class="line"><span class="language-css">    <span class="comment">/* transform: translateZ(0); */</span></span></span><br><span class="line"><span class="language-css">  &#125;</span></span><br><span class="line"><span class="language-css"></span></span><br><span class="line"><span class="language-css">  <span class="selector-class">.overlap</span> &#123;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">position</span>: absolute;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">top</span>: <span class="number">50px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">left</span>: <span class="number">50px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">width</span>: <span class="number">150px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">height</span>: <span class="number">100px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">background</span>: <span class="number">#90ee90</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">display</span>: flex;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">align-items</span>: center;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">justify-content</span>: center;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">z-index</span>: <span class="number">10</span>;</span></span><br><span class="line"><span class="language-css">  &#125;</span></span><br><span class="line"><span class="language-css"></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">h3</span>&gt;</span>Visibility测试）<span class="tag">&lt;/<span class="name">h3</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;container&quot;</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;rect&quot;</span>&gt;</span>底层元素<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">div</span> <span class="attr">class</span>=<span class="string">&quot;overlap&quot;</span>&gt;</span>上层元素<span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">  </span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    <span class="built_in">setTimeout</span>(<span class="function">() =&gt;</span> &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="variable language_">document</span>.<span class="title function_">getElementById</span>(<span class="string">&#x27;rect&#x27;</span>).<span class="property">style</span>.<span class="property">visibility</span> = <span class="string">&#x27;hidden&#x27;</span>;</span></span><br><span class="line"><span class="language-javascript">      <span class="comment">// document.getElementById(&#x27;rect&#x27;).style.opacity = &#x27;0&#x27;;</span></span></span><br><span class="line"><span class="language-javascript">    &#125;, <span class="number">2000</span>);</span></span><br><span class="line"><span class="language-javascript">  </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>不仅仅有上面两个例子可以在重绘回流方面进行优化，还有很多CSS属性可以做到减少重回回流这个需求**（待探索）**</p>
+<h2 id="批量修改DOM的class"><a href="#批量修改DOM的class" class="headerlink" title="批量修改DOM的class"></a><strong>批量修改DOM的class</strong></h2><p>一条一条的修改 DOM 样式，每次修改都会进行一次重绘，定义在一个className中进行一次性修改，用add、append、remove等。有的时候一条一条的修改class并没有出现修改一次只从一次回流重绘，是因为浏览器自带的缓冲机制</p>
+<h2 id="避免将DOM属性值在循环中作为变量"><a href="#避免将DOM属性值在循环中作为变量" class="headerlink" title="避免将DOM属性值在循环中作为变量"></a><strong>避免将DOM属性值在循环中作为变量</strong></h2><p>获取 DOM 节点的几何属性值，如 offsetHeight、offsetWidth，时会触发一个回流的过程。因为浏览器回去获取当前最新的某个 DOM 元素在我整个布局中的位置，就会强制刷新缓冲区域。缓冲机制值为了避免回流过于频繁的，将 DOM 节点的属性值放在循环里就会不断地破坏缓冲机制，使其失效</p>
+<figure class="highlight html"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">style</span>&gt;</span><span class="language-css"></span></span><br><span class="line"><span class="language-css">  <span class="selector-id">#rect</span> &#123;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">width</span>: <span class="number">100px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">height</span>: <span class="number">100px</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">background</span>: <span class="number">#4682b4</span>;</span></span><br><span class="line"><span class="language-css">    <span class="attribute">margin</span>: <span class="number">20px</span>;</span></span><br><span class="line"><span class="language-css">  &#125;</span></span><br><span class="line"><span class="language-css"></span><span class="tag">&lt;/<span class="name">style</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">head</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">body</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">div</span> <span class="attr">id</span>=<span class="string">&quot;rect&quot;</span>&gt;</span><span class="tag">&lt;/<span class="name">div</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="language-javascript"></span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">const</span> doms = []</span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">const</span> domsTop = []</span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">const</span> clientHeight = <span class="variable language_">document</span>.<span class="property">body</span>.<span class="property">clientHeight</span></span></span><br><span class="line"><span class="language-javascript">    <span class="keyword">for</span>(<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; doms.<span class="property">length</span>; i++) &#123;</span></span><br><span class="line"><span class="language-javascript">      <span class="comment">// doms.push(document.body.clientHeight + i * 100)</span></span></span><br><span class="line"><span class="language-javascript">      domsTop.<span class="title function_">push</span>(clientHeight + i * <span class="number">100</span>)</span></span><br><span class="line"><span class="language-javascript">    &#125;</span></span><br><span class="line"><span class="language-javascript">  </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">body</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">html</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="避免使用-table-布局"><a href="#避免使用-table-布局" class="headerlink" title="避免使用 table 布局"></a><strong>避免使用 table 布局</strong></h2><p>​	table 中很小的改动会影响整个 table ，当 table 很大的时候会增加 Layout 的时间，所以尽量去使用 div 布局，因为某个 div 需要重新布局的话，只会影响后面的元素的布局</p>
+<h2 id="动画实现的速度选择"><a href="#动画实现的速度选择" class="headerlink" title="动画实现的速度选择"></a><strong>动画实现的速度选择</strong></h2><p>​	动画触发的代价取决于动画属性：layout &gt; paint &gt; composite。作用在layout属性会回流，作用在paint属性会重绘，作用在composite属性不会回流重绘，只会在合成阶段运行。如果动画的频率过高就会一直回流重绘重新获取位置信息等，就会导致浏览器很卡顿，即 JS 线程的执行会受到 UI 线程的阻塞，而且重绘和计算也是会消耗CPU资源的。</p>
+<h2 id="对于动画新建图层"><a href="#对于动画新建图层" class="headerlink" title="对于动画新建图层"></a><strong>对于动画新建图层</strong></h2><p>​	对于video、canvas、transform、will-change这样属性的 DOM 元素，chrome会自动把它设置为一个新的图层。但是对于自己写的动画可能使用 div 包裹的，chrome不知道是动画，就不会创造新的图层，所以需要手动创建。</p>
+<h2 id="启用-GPU-硬件加速"><a href="#启用-GPU-硬件加速" class="headerlink" title="启用 GPU 硬件加速"></a><strong>启用 GPU 硬件加速</strong></h2><p>​	在我们使用位置变换的时候，如果用 translate 3D，会涉及到 GPU 的运算能力。GPU 的运算能力对于整个纹理的绘制，整个图像的并行运算其实是非常有好处的。因为 GPU 本质是一个并行运算的运算单元，对需要进行并行运算的图像的处理速度是非常快的。但是 GPU 加速也是有代价的，使用 GPU 加速意味着数据要从 CPU 走总线到 GPU 上， GPU 才能对数据进行运算，代价主要体现在数据从 CPU 走到 GPU 的损耗。	</p>
+<h3 id="如何启动-GPU加速？"><a href="#如何启动-GPU加速？" class="headerlink" title="如何启动 GPU加速？"></a><strong>如何启动 GPU加速？</strong></h3><ul>
+<li><p>使用 3D 变换强制开启 GPU</p>
+<p><code>transform: translateZ(0);</code>  <code>transform: translate3d(0,0,0);</code></p>
+</li>
+<li><p>使用合成级别的动画属性</p>
+<p><code>transform</code>  <code>opacity</code></p>
+</li>
+<li><p>使用 <code>will-change</code> 提示</p>
+<p>注意不要滥用will-change，Chrome对其的滥用会有警告</p>
+</li>
+<li><p>使用 CSS 滤镜 &#x2F; 特效</p>
+<p><code>filter: blur(10px);</code>  <code>backdrop-filter: blur(5px);</code>  <code>mix-blend-mode</code>  这些计算开销大，浏览器会放在 GPU 加速</p>
+</li>
+<li><p>使用视频 &#x2F; canvas &#x2F; iframe &#x2F; WebGL</p>
+<p>默认就会创建独立合成图层，走 GPU</p>
+</li>
+</ul>
+<p>写在最后</p>
+<p>任何一个优化都会有相应的代价，我们在做性能优化的时候应该根据业务系统去balance</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://jasmine661.github.io">Jasmine</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://jasmine661.github.io/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/">https://jasmine661.github.io/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://jasmine661.github.io" target="_blank">jasmine的世界</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/09/19/%E6%87%92%E5%8A%A0%E8%BD%BD%E5%92%8C%E9%A2%84%E5%8A%A0%E8%BD%BD/" title="懒加载和预加载"><img class="cover" src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">懒加载和预加载</div></div><div class="info-2"><div class="info-item-1">概念懒加载在图片进入可视区之后再请求图片资源是一个很典型的懒加载case 懒加载适用于对于电商等图片很多，页面很长的业务场景适用 懒加载可以减少无效资源的加载，也能解决并发加载的资源过多造成的 JS 阻塞 预加载和懒加载是一个相反的过程，是对资源的提前请求。在资源需要被使用时能从缓存中加载，提升用户体验。 使用预加载也能去维护一些页面展示的一个依赖关系。 比如大型图片组成的动画，抽奖组件等 懒加载的使用以图片进入视口后再加载这个需求为例 HTML原生懒加载loading &#x3D; “lazy” 1&lt;img src=&quot;big-image.jpg&quot; alt=&quot;是一只可爱的小橘猫呀&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot;&gt;  逐项解释  loading&#x3D;”lazy”：告诉浏览器延迟加载图片，直到图片接近&#x2F;进入视口。浏览器决定何时加载。 decoding&#x3D;”async”：提醒浏览器异步解码图像，减少阻塞渲染 alt：可访问性必须选，屏幕阅...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Jasmine</div><div class="author-info-description">The rain that night built a nest in my soul.</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">23</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">10</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%A6%82%E5%BF%B5"><span class="toc-number">1.</span> <span class="toc-text">概念</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9E%E6%B5%81%EF%BC%88Reflow-Layout%EF%BC%89"><span class="toc-number">1.1.</span> <span class="toc-text">回流（Reflow &#x2F; Layout）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%87%8D%E7%BB%98%EF%BC%88Repaint%EF%BC%89"><span class="toc-number">1.2.</span> <span class="toc-text">重绘（Repaint）</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%87%8F%E5%B0%91%E9%87%8D%E7%BB%98%E5%9B%9E%E6%B5%81%E7%9A%84%E6%96%B9%E6%A1%88"><span class="toc-number">2.</span> <span class="toc-text">减少重绘回流的方案</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Chrome%E5%88%9B%E5%BB%BA%E5%9B%BE%E5%B1%82%E7%9A%84%E6%9D%A1%E4%BB%B6"><span class="toc-number">3.</span> <span class="toc-text">Chrome创建图层的条件</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%AE%9E%E6%88%98%E4%BC%98%E5%8C%96"><span class="toc-number">4.</span> <span class="toc-text">实战优化</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%94%A8-translate-%E4%BB%A3%E6%9B%BF-top-%E6%94%B9%E5%8F%98"><span class="toc-number">4.1.</span> <span class="toc-text">用 translate 代替 top 改变</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%94%A8-opacity-%E4%BB%A3%E6%9B%BF-visibility"><span class="toc-number">4.2.</span> <span class="toc-text">用 opacity 代替 visibility</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%89%B9%E9%87%8F%E4%BF%AE%E6%94%B9DOM%E7%9A%84class"><span class="toc-number">4.3.</span> <span class="toc-text">批量修改DOM的class</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%81%BF%E5%85%8D%E5%B0%86DOM%E5%B1%9E%E6%80%A7%E5%80%BC%E5%9C%A8%E5%BE%AA%E7%8E%AF%E4%B8%AD%E4%BD%9C%E4%B8%BA%E5%8F%98%E9%87%8F"><span class="toc-number">4.4.</span> <span class="toc-text">避免将DOM属性值在循环中作为变量</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%81%BF%E5%85%8D%E4%BD%BF%E7%94%A8-table-%E5%B8%83%E5%B1%80"><span class="toc-number">4.5.</span> <span class="toc-text">避免使用 table 布局</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8A%A8%E7%94%BB%E5%AE%9E%E7%8E%B0%E7%9A%84%E9%80%9F%E5%BA%A6%E9%80%89%E6%8B%A9"><span class="toc-number">4.6.</span> <span class="toc-text">动画实现的速度选择</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9%E4%BA%8E%E5%8A%A8%E7%94%BB%E6%96%B0%E5%BB%BA%E5%9B%BE%E5%B1%82"><span class="toc-number">4.7.</span> <span class="toc-text">对于动画新建图层</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%90%AF%E7%94%A8-GPU-%E7%A1%AC%E4%BB%B6%E5%8A%A0%E9%80%9F"><span class="toc-number">4.8.</span> <span class="toc-text">启用 GPU 硬件加速</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E5%90%AF%E5%8A%A8-GPU%E5%8A%A0%E9%80%9F%EF%BC%9F"><span class="toc-number">4.8.1.</span> <span class="toc-text">如何启动 GPU加速？</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/" title="重绘与回流"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="重绘与回流"/></a><div class="content"><a class="title" href="/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/" title="重绘与回流">重绘与回流</a><time datetime="2025-09-23T07:48:56.840Z" title="发表于 2025-09-23 15:48:56">2025-09-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/19/%E6%87%92%E5%8A%A0%E8%BD%BD%E5%92%8C%E9%A2%84%E5%8A%A0%E8%BD%BD/" title="懒加载和预加载"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="懒加载和预加载"/></a><div class="content"><a class="title" href="/2025/09/19/%E6%87%92%E5%8A%A0%E8%BD%BD%E5%92%8C%E9%A2%84%E5%8A%A0%E8%BD%BD/" title="懒加载和预加载">懒加载和预加载</a><time datetime="2025-09-19T13:29:22.029Z" title="发表于 2025-09-19 21:29:22">2025-09-19</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/19/css%E5%92%8Cjs%E7%9A%84%E8%A3%85%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C/" title="css和js的装载和运行"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="css和js的装载和运行"/></a><div class="content"><a class="title" href="/2025/09/19/css%E5%92%8Cjs%E7%9A%84%E8%A3%85%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C/" title="css和js的装载和运行">css和js的装载和运行</a><time datetime="2025-09-19T05:40:37.074Z" title="发表于 2025-09-19 13:40:37">2025-09-19</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/18/%E5%9B%BE%E7%89%87%E7%9B%B8%E5%85%B3%E4%BC%98%E5%8C%96/" title="图片相关优化"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="图片相关优化"/></a><div class="content"><a class="title" href="/2025/09/18/%E5%9B%BE%E7%89%87%E7%9B%B8%E5%85%B3%E4%BC%98%E5%8C%96/" title="图片相关优化">图片相关优化</a><time datetime="2025-09-18T13:25:08.327Z" title="发表于 2025-09-18 21:25:08">2025-09-18</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/16/%E8%B5%84%E6%BA%90%E5%90%88%E5%B9%B6%E4%B8%8E%E5%8E%8B%E7%BC%A9/" title="资源合并与压缩"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="资源合并与压缩"/></a><div class="content"><a class="title" href="/2025/09/16/%E8%B5%84%E6%BA%90%E5%90%88%E5%B9%B6%E4%B8%8E%E5%8E%8B%E7%BC%A9/" title="资源合并与压缩">资源合并与压缩</a><time datetime="2025-09-16T13:32:41.500Z" title="发表于 2025-09-16 21:32:41">2025-09-16</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/image/footer.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Jasmine</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
