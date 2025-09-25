@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>浏览器存储 | jasmine的世界</title><meta name="author" content="Jasmine"><meta name="copyright" content="Jasmine"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="浏览器的存储方式介绍cookie因为 http请求 本身是无状态的，即请求结束之后连接就关闭了，下一次请求时服务端是不清楚这次请求和上次请求是不是来自同一个客户端的，即不知道两次请求有什么关系，就需要去解决关于用户信息的问题。 cookie就是为了用来维护客户端和浏览器之间的状态的标识，告诉服务端请求来自哪个客户端。是由服务端生成，交给客户端存储和管理，在每次请求的时候把cookie放在http">
+<meta property="og:type" content="article">
+<meta property="og:title" content="浏览器存储">
+<meta property="og:url" content="https://jasmine661.github.io/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/index.html">
+<meta property="og:site_name" content="jasmine的世界">
+<meta property="og:description" content="浏览器的存储方式介绍cookie因为 http请求 本身是无状态的，即请求结束之后连接就关闭了，下一次请求时服务端是不清楚这次请求和上次请求是不是来自同一个客户端的，即不知道两次请求有什么关系，就需要去解决关于用户信息的问题。 cookie就是为了用来维护客户端和浏览器之间的状态的标识，告诉服务端请求来自哪个客户端。是由服务端生成，交给客户端存储和管理，在每次请求的时候把cookie放在http">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://jasmine661.github.io/image/b8efb915a5ef35aa58e10657028c9baa.jpg">
+<meta property="article:published_time" content="2025-09-25T07:49:32.795Z">
+<meta property="article:modified_time" content="2025-09-25T13:46:17.734Z">
+<meta property="article:author" content="Jasmine">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://jasmine661.github.io/image/b8efb915a5ef35aa58e10657028c9baa.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "浏览器存储",
+  "url": "https://jasmine661.github.io/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/",
+  "image": "https://jasmine661.github.io/image/b8efb915a5ef35aa58e10657028c9baa.jpg",
+  "datePublished": "2025-09-25T07:49:32.795Z",
+  "dateModified": "2025-09-25T13:46:17.734Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Jasmine",
+      "url": "https://jasmine661.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://jasmine661.github.io/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '浏览器存储',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.3.0"></head><body><div id="web_bg" style="background-image: url(/image/background.jpg);"></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">11</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-heartbeat"></i><span> 清单</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/image/b8efb915a5ef35aa58e10657028c9baa.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><img class="site-icon" src="/image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg" alt="Logo"><span class="site-name">jasmine的世界</span></a><a class="nav-page-title" href="/"><span class="site-name">浏览器存储</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-heartbeat"></i><span> 清单</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/music/"><i class="fa-fw fas fa-music"></i><span> 音乐</span></a></li><li><a class="site-page child" href="/Gallery/"><i class="fa-fw fas fa-images"></i><span> 照片</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 电影</span></a></li></ul></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">浏览器存储</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-09-25T07:49:32.795Z" title="发表于 2025-09-25 15:49:32">2025-09-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-09-25T13:46:17.734Z" title="更新于 2025-09-25 21:46:17">2025-09-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/">前端性能优化</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%89%8D%E7%AB%AF%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/">浏览器存储</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="浏览器的存储方式介绍"><a href="#浏览器的存储方式介绍" class="headerlink" title="浏览器的存储方式介绍"></a>浏览器的存储方式介绍</h1><h2 id="cookie"><a href="#cookie" class="headerlink" title="cookie"></a>cookie</h2><p>因为 http请求 本身是无状态的，即请求结束之后连接就关闭了，下一次请求时服务端是不清楚这次请求和上次请求是不是来自同一个客户端的，即不知道两次请求有什么关系，就需要去解决关于用户信息的问题。</p>
+<p>cookie就是为了用来维护客户端和浏览器之间的状态的标识，告诉服务端请求来自哪个客户端。是由服务端生成，交给客户端存储和管理，在每次请求的时候把cookie放在http header，服务端就会知道当前请求来自哪个客户端了。</p>
+<p>我们也能通过 JS 的 <code>document.cookie</code> 去查看或者修改 cookie。但是如果 cookie 设置了 httponly，当前 cookie 就不支持 JS 读写</p>
+<p>总的来说cookie是用于 浏览器端和服务器端的交互 以及 客户端自身数据的存储。</p>
+<p>cookie的缺陷</p>
+<p>1.作为浏览器存储，大小只有4kb左右</p>
+<p>2.需要设置过期时间 expire</p>
+<p>所以仅仅是做浏览器存储的话，用 <strong>localStorage</strong> 会更好</p>
+<p>性能消耗</p>
+<p>由于 cookie 是一个域名维度下的概念，所以只要是这个域名下的所有请求，都会携带 cookie，就容易造成 cdn 的流量损耗。所以我们要把 cdn 的域名和主站的域名独立开，在 cdn 上存储静态文件而不要携带 cookie。</p>
+<h2 id="LocalStorage、SessionStorage"><a href="#LocalStorage、SessionStorage" class="headerlink" title="LocalStorage、SessionStorage"></a>LocalStorage、SessionStorage</h2><p><strong>LocalStorage</strong> 是 HTML5 设计出来专门用于浏览器存储的，大小为 5M 左右，仅在客户端使用，不和服务端进行通信。JS 读取使用 localStorage 的 API 有很好的封装。</p>
+<p>性能优化点主要在浏览器的本地缓存方案，常用于减少首屏加载时间等等</p>
+<p><strong>SessionStorage</strong> 是 HTML5 设计出来的会话级别的浏览器存储，除此之外几乎和 LocalStorage 差不多。</p>
+<p>性能优化点可以在表单信息的维护上，用于提升用户的体验</p>
+<h2 id="IndexedDB"><a href="#IndexedDB" class="headerlink" title="IndexedDB"></a>IndexedDB</h2><p>是一种低级 API ，用于客户端存储大量结构化数据。该 API 使用索引来实现对该数据的高性能搜索。虽然 Web Storage 对于存储较少量的数据很有用，但对于存储更大量的结构化数据来说，这种方法不太有用。这个时候就可以使用 IndexedDB 来提供解决方案。</p>
+<p>IndexedDB实际上在网络中的各大站点上的应用是比较少的，但是也确实可以做很多事。比如可以为我们的应用创建离线版本</p>
+<h1 id="PWA"><a href="#PWA" class="headerlink" title="PWA"></a>PWA</h1><p>PWA (Progressive Web Apps) 是一种Web App 新模型，并不是具体指某一种前沿的技术或者某一个单一的知识点。这是一个渐进式的 Web App，是通过一系列新的 Web 特性，配合优秀的 UI 交互设计，逐步的增强 Web App 的用户体验。</p>
+<ul>
+<li>可靠性：Web App在没用有网络的环境中也能够提供基本的页面访问，而不会出现“未连接互联网”的页面。这其实是 Web 相对 IOS 和 安卓 的一个劣势。Web App在前端在这一方面是增量式的从网络上加载资源的一个过程，如果没有网络就加载不到资源。</li>
+<li>快速：针对网页渲染以及网络数据访问有较好的优化，相较于原生App。</li>
+<li>融入(Engaging)：应用可以被增加到手机桌面，并且和普通应用一样有全屏、推进等特性。这一点是完全对标App的。</li>
+</ul>
+<h1 id="Service-Workers"><a href="#Service-Workers" class="headerlink" title="Service Workers"></a>Service Workers</h1><p>SW 是一个脚本，浏览器独立于当前网页，将其在后台运行 ，去实现一些不依赖页面或者用户交互的特性。</p>
+<p>JavaScript 本身是一个单线程的，所有的 JS 代码都是在 JS 主线程去执行。当要进行非常大数据的读取，或者巨量的前端相关的运算的话，实际上会严重阻碍相关页面的渲染。</p>
+<p><strong>Service Workers</strong> 的作用就是对这样大规模数据在其他的线程去进行运算和获取，然后将结果返回到主线程，由主线程进行渲染或者执行其他后续的操作，这样可以避免主线程被 JS 代码巨大的逻辑阻塞，大大提升了浏览器在处理大规模 JS 运算的能力。</p>
+<h2 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h2><ul>
+<li><p><strong>拦截和代理网络请求（Fetch Interception）</strong></p>
+<p>可以拦截页面发出的 <code>fetch</code> &#x2F; <code>XHR</code> 请求</p>
+<p>按策略返回缓存、网络资源，或者做离线回退</p>
+<p>这就是 <strong>离线体验</strong> 和 <strong>资源加速</strong> 的关键</p>
+</li>
+<li><p><strong>离线缓存</strong></p>
+<p>搭配 <strong>Cache Storage API</strong> 使用，SW 可以把静态文件（HTML&#x2F;CSS&#x2F;JS&#x2F;图片）缓存到本地</p>
+<p>即便断网，也能直接从缓存中取出资源。</p>
+</li>
+<li><p><strong>后台同步</strong></p>
+<p>当用户离线时，操作会暂存在本地</p>
+<p>等网络恢复时再统一发送请求（比如离线发送消息）。</p>
+</li>
+<li><p><strong>推送通知</strong></p>
+<p>SW 可以和服务器保持连接，接收 <strong>Web Push Notification</strong></p>
+<p>即使页面关闭，也能在系统通知栏显示。</p>
+</li>
+<li><p><strong>定期后台同步</strong></p>
+<p>可以让 SW 定时拉取内容（比如新闻更新、天气数据）。</p>
+<p>相比普通 Background Sync 更自动化。</p>
+</li>
+<li><p><strong>后台任务处理</strong></p>
+<p>可以在用户没开网页时执行一些逻辑（比如静默更新缓存）。</p>
+</li>
+</ul>
+<h2 id="生命周期"><a href="#生命周期" class="headerlink" title="生命周期"></a>生命周期</h2><figure class="highlight mathematica"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">Register</span> → <span class="built_in">Install</span> → <span class="variable">Waiting</span> → <span class="built_in">Activate</span> → <span class="built_in">Active</span> <span class="punctuation">(</span><span class="variable">Fetch</span><span class="operator">/</span><span class="variable">Push</span><span class="operator">/</span><span class="variable">Sync</span><span class="punctuation">)</span> → <span class="built_in">Update</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Active常见事件"><a href="#Active常见事件" class="headerlink" title="Active常见事件"></a>Active常见事件</h3><ul>
+<li>Fetch：拦截网络请求（离线缓存策略）</li>
+<li>push：接收推送</li>
+<li>sync：后台同步</li>
+</ul>
+<h3 id="Chrome-中对-SW-的检查"><a href="#Chrome-中对-SW-的检查" class="headerlink" title="Chrome 中对 SW 的检查"></a>Chrome 中对 SW 的检查</h3><p>以下是两个chrome的命令</p>
+<ul>
+<li><p>chrome:&#x2F;&#x2F;serviceworker-internals&#x2F;?devtools ：可以查看自己已经在 Chrome 中注册过的 SW 的情况，我这里常见的网站我是打开了百度云（<a target="_blank" rel="noopener" href="https://cloud.baidu.com/%EF%BC%89%E6%9F%A5%E7%9C%8B%E7%9A%84">https://cloud.baidu.com/）查看的</a></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">Scope: https://cloud.baidu.com/</span><br><span class="line">Storage key:</span><br><span class="line">  Origin: https://cloud.baidu.com</span><br><span class="line">  Top level site: https://baidu.com</span><br><span class="line">  Ancestor chain bit: SameSite</span><br><span class="line">Registration ID: 125</span><br><span class="line">Navigation preload enabled: false</span><br><span class="line">Navigation preload header length: 4</span><br><span class="line">Active worker:</span><br><span class="line">  Installation Status: ACTIVATED</span><br><span class="line">  Running Status: STOPPED</span><br><span class="line">  Fetch handler existence: EXISTS</span><br><span class="line">  Fetch handler type: NOT_SKIPPABLE</span><br><span class="line">  Script: https://cloud.baidu.com/service-worker.js</span><br><span class="line">  Version ID: 169</span><br><span class="line">  Renderer process ID: 0</span><br><span class="line">  Renderer thread ID: -1</span><br><span class="line">  DevTools agent route ID: -2</span><br><span class="line">  Client:</span><br><span class="line">    ID: d7bd2cfd-9ef7-4798-89b1-2e1317817534</span><br><span class="line">    URL: https://cloud.baidu.com/</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>chrome:&#x2F;&#x2F;inspect&#x2F;#service-workers ：可以查看现在浏览器正在开启 SW 的网站有哪些</p>
+</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://jasmine661.github.io">Jasmine</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://jasmine661.github.io/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/">https://jasmine661.github.io/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://jasmine661.github.io" target="_blank">jasmine的世界</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/" title="重绘与回流"><img class="cover" src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">重绘与回流</div></div><div class="info-2"><div class="info-item-1">概念引入 浏览器的主要线程有 JS线程 和 UI线程，宏观顺序关系是 JS 执行 → 样式计算 → 回流 → 重绘 → 合成 →GPU→ 下一轮循环，所以如果一个循环中进行多次的回流重绘，就会阻塞下一个循环的 JS执行 回流（Reflow &#x2F; Layout）当浏览器发现 render tree 中某个部分的几何尺寸（位置、大小）发生变化，需要重新计算元素的几何属性，然后重新布局整个渲染树，这个过程叫做回流。 触发回流的典型操作：  添加或删除可见的 DOM 元素 元素的大小、位置发生变化（比如 width、height、margin、padding、border、font-size 等属性改变） 浏览器窗口大小变化（因为会影响布局） 获取某些属性时（如 offsetTop、offsetHeight、clientWidth、scrollTop 等），因为需要计算最新的布局结果   回流的代价比较大，因为可能会导致整个页面的重新布局。  重绘（Repaint）定义：当元素的外观样式改变，但没有影响布局时，浏览器会重新把该元素绘制一遍，这个过程叫做重绘。 触发重绘的典型操作：...</div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/image/b_396d2c65c6d973a43d310f09a53bcdb8.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Jasmine</div><div class="author-info-description">The rain that night built a nest in my soul.</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">24</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">0</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">11</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%B5%8F%E8%A7%88%E5%99%A8%E7%9A%84%E5%AD%98%E5%82%A8%E6%96%B9%E5%BC%8F%E4%BB%8B%E7%BB%8D"><span class="toc-number">1.</span> <span class="toc-text">浏览器的存储方式介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#cookie"><span class="toc-number">1.1.</span> <span class="toc-text">cookie</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#LocalStorage%E3%80%81SessionStorage"><span class="toc-number">1.2.</span> <span class="toc-text">LocalStorage、SessionStorage</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#IndexedDB"><span class="toc-number">1.3.</span> <span class="toc-text">IndexedDB</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#PWA"><span class="toc-number">2.</span> <span class="toc-text">PWA</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Service-Workers"><span class="toc-number">3.</span> <span class="toc-text">Service Workers</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%89%B9%E6%80%A7"><span class="toc-number">3.1.</span> <span class="toc-text">特性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="toc-number">3.2.</span> <span class="toc-text">生命周期</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Active%E5%B8%B8%E8%A7%81%E4%BA%8B%E4%BB%B6"><span class="toc-number">3.2.1.</span> <span class="toc-text">Active常见事件</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Chrome-%E4%B8%AD%E5%AF%B9-SW-%E7%9A%84%E6%A3%80%E6%9F%A5"><span class="toc-number">3.2.2.</span> <span class="toc-text">Chrome 中对 SW 的检查</span></a></li></ol></li></ol></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/" title="浏览器存储"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="浏览器存储"/></a><div class="content"><a class="title" href="/2025/09/25/%E6%B5%8F%E8%A7%88%E5%99%A8%E5%AD%98%E5%82%A8/" title="浏览器存储">浏览器存储</a><time datetime="2025-09-25T07:49:32.795Z" title="发表于 2025-09-25 15:49:32">2025-09-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/" title="重绘与回流"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="重绘与回流"/></a><div class="content"><a class="title" href="/2025/09/23/%E9%87%8D%E7%BB%98%E4%B8%8E%E5%9B%9E%E6%B5%81/" title="重绘与回流">重绘与回流</a><time datetime="2025-09-23T07:48:56.840Z" title="发表于 2025-09-23 15:48:56">2025-09-23</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/19/%E6%87%92%E5%8A%A0%E8%BD%BD%E5%92%8C%E9%A2%84%E5%8A%A0%E8%BD%BD/" title="懒加载和预加载"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="懒加载和预加载"/></a><div class="content"><a class="title" href="/2025/09/19/%E6%87%92%E5%8A%A0%E8%BD%BD%E5%92%8C%E9%A2%84%E5%8A%A0%E8%BD%BD/" title="懒加载和预加载">懒加载和预加载</a><time datetime="2025-09-19T13:29:22.029Z" title="发表于 2025-09-19 21:29:22">2025-09-19</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/19/css%E5%92%8Cjs%E7%9A%84%E8%A3%85%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C/" title="css和js的装载和运行"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="css和js的装载和运行"/></a><div class="content"><a class="title" href="/2025/09/19/css%E5%92%8Cjs%E7%9A%84%E8%A3%85%E8%BD%BD%E5%92%8C%E8%BF%90%E8%A1%8C/" title="css和js的装载和运行">css和js的装载和运行</a><time datetime="2025-09-19T05:40:37.074Z" title="发表于 2025-09-19 13:40:37">2025-09-19</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2025/09/18/%E5%9B%BE%E7%89%87%E7%9B%B8%E5%85%B3%E4%BC%98%E5%8C%96/" title="图片相关优化"><img src="/image/b8efb915a5ef35aa58e10657028c9baa.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="图片相关优化"/></a><div class="content"><a class="title" href="/2025/09/18/%E5%9B%BE%E7%89%87%E7%9B%B8%E5%85%B3%E4%BC%98%E5%8C%96/" title="图片相关优化">图片相关优化</a><time datetime="2025-09-18T13:25:08.327Z" title="发表于 2025-09-18 21:25:08">2025-09-18</time></div></div></div></div></div></div></main><footer id="footer" style="background-image: url(/image/footer.jpg);"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 By Jasmine</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.3.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.5.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
